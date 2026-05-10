@@ -1,0 +1,72 @@
+# =============================================================
+# .gitignore — Hồ sơ số Trường Mầm non Diễn Thịnh
+# Mục đích: KHÔNG cho Git theo dõi các file chứa thông tin
+# cá nhân của trẻ/CBGV (Nghị định 13/2023/NĐ-CP) hoặc file
+# server-side. Chỉ commit 4 file public an toàn:
+#   index.html, app.js, style.css, README.md
+# =============================================================
+
+# === DỮ LIỆU CÁ NHÂN — TUYỆT ĐỐI KHÔNG PUBLIC ===
+# Danh sách trẻ + CBGV (chứa SĐT phụ huynh, ngày sinh, địa chỉ...)
+*.xlsx
+*.xls
+*.xlsm
+*.gsheet
+*.csv
+
+# === FILE SERVER-SIDE ===
+# Google Apps Script: deploy qua trình quản lý GAS, KHÔNG public
+Code.gs
+*.gs
+
+# === ẢNH NỘI BỘ KHÔNG DÙNG TRÊN WEB ===
+# Web load ảnh từ Google Drive (lh3.googleusercontent.com)
+Ảnh/
+images/private/
+
+# === BACKUP, TẠM, CHỈNH SỬA ===
+*.bak
+*.tmp
+*.old
+*.orig
+*~
+.commit-msg.tmp
+
+# === BIẾN MÔI TRƯỜNG / KHÓA BÍ MẬT ===
+.env
+.env.*
+!.env.example
+secrets.json
+*.key
+*.pem
+
+# === IDE / EDITOR ===
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+.history/
+
+# === HỆ ĐIỀU HÀNH ===
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.DS_Store
+$RECYCLE.BIN/
+
+# === NODE / BUILD (phòng khi tương lai có build pipeline) ===
+node_modules/
+dist/
+build/
+.cache/
+package-lock.json
+yarn.lock
+
+# === LOG ===
+*.log
+logs/
+
+# === CLAUDE / MEMORY (private) ===
+.claude/
+CLAUDE.local.md
