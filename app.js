@@ -600,18 +600,124 @@
     document.getElementById('studentsPanel').classList.remove('active');
     document.getElementById('classes').scrollIntoView({behavior:'smooth'});
   }
+  // ============ KHÓA CBGV — PII GATE (Nghị định 13/2023/NĐ-CP) ============
+  // Mặc định: SĐT phụ huynh, họ tên cha/mẹ, địa chỉ chi tiết được mask khỏi UI.
+  // Chỉ CBGV biết mật khẩu mới mở khóa được. Trạng thái mở khóa chỉ tồn tại
+  // trong sessionStorage (đóng tab → mất).
+  // ⚠ Đây là CLIENT-SIDE GATE: ẩn UI nhưng raw JSON vẫn về browser qua
+  //    Network tab. Bảo vệ thật phải lọc ở backend (Code.gs) — TODO phiên sau.
+  const CBGV_HASH = '5f81ae23baae36be238d2117c87c476234c5e4b7ddcc019a45714fa55c5f9e74'; // SHA-256("cbgv@2026")
+  const CBGV_KEY = 'cbgv_unlocked';
+  function cbgvIsUnlocked(){
+    try{ return sessionStorage.getItem(CBGV_KEY) === '1'; }catch(e){ return false; }
+  }
+  function _cbgvUpdateBtn(){
+    const btn = document.getElementById('cbgvToggleBtn');
+    const note = document.getElementById('spPiiNote');
+    if(!btn) return;
+    if(cbgvIsUnlocked()){
+      btn.innerHTML = '🔓 Đã mở · Khóa lại';
+      btn.classList.add('unlocked');
+      btn.title = 'Đang hiển thị đầy đủ thông tin. Bấm để khóa lại.';
+      btn.onclick = window.cbgvLock;
+      if(note) note.classList.add('hidden');
+    } else {
+      btn.innerHTML = '🔒 Mở thông tin (CBGV)';
+      btn.classList.remove('unlocked');
+      btn.title = 'Chỉ CBGV mới có quyền xem SĐT phụ huynh, tên cha mẹ, địa chỉ chi tiết.';
+      btn.onclick = window.cbgvOpenUnlock;
+      if(note) note.classList.remove('hidden');
+    }
+  }
+  function cbgvOpenUnlock(){
+    const ov = document.getElementById('cbgvOverlay');
+    if(!ov) return;
+    ov.classList.add('open');
+    document.getElementById('cbgvPwdInput').value = '';
+    const msg = document.getElementById('cbgvMsg');
+    msg.textContent = '';
+    msg.className = 'cbgv-msg';
+    setTimeout(() => { try{ document.getElementById('cbgvPwdInput').focus(); }catch(e){} }, 100);
+  }
+  function cbgvCloseModal(){
+    const ov = document.getElementById('cbgvOverlay');
+    if(ov) ov.classList.remove('open');
+  }
+  async function cbgvDoUnlock(){
+    const input = (document.getElementById('cbgvPwdInput').value || '').trim();
+    const msg = document.getElementById('cbgvMsg');
+    if(!input){
+      msg.textContent = 'Vui lòng nhập mật khẩu.';
+      msg.className = 'cbgv-msg error';
+      return;
+    }
+    let hash = '';
+    try{ hash = await _sha256hex(input); }catch(e){
+      msg.textContent = 'Lỗi mã hóa, thử lại.';
+      msg.className = 'cbgv-msg error';
+      return;
+    }
+    if(hash === CBGV_HASH){
+      try{ sessionStorage.setItem(CBGV_KEY, '1'); }catch(e){}
+      msg.textContent = '✓ Đã mở khóa thành công.';
+      msg.className = 'cbgv-msg ok';
+      setTimeout(() => {
+        cbgvCloseModal();
+        _cbgvUpdateBtn();
+        if(currentClass) renderStudents(currentClass.students);
+      }, 500);
+    } else {
+      msg.textContent = '✗ Mật khẩu không đúng. Vui lòng liên hệ Ban giám hiệu.';
+      msg.className = 'cbgv-msg error';
+    }
+  }
+  function cbgvLock(){
+    try{ sessionStorage.removeItem(CBGV_KEY); }catch(e){}
+    _cbgvUpdateBtn();
+    if(currentClass) renderStudents(currentClass.students);
+  }
+  // Expose ra global cho onclick HTML
+  window.cbgvOpenUnlock = cbgvOpenUnlock;
+  window.cbgvCloseModal = cbgvCloseModal;
+  window.cbgvDoUnlock = cbgvDoUnlock;
+  window.cbgvLock = cbgvLock;
+  // ESC đóng modal CBGV
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    const ov = document.getElementById('cbgvOverlay');
+    if(ov && ov.classList.contains('open')) cbgvCloseModal();
+  });
+  // Sync nút khi DOM ready (state có thể từ session trước)
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', _cbgvUpdateBtn);
+  } else {
+    _cbgvUpdateBtn();
+  }
+
   function renderStudents(list){
     const wrap = document.getElementById('stTableWrap');
     if(!list.length){
       wrap.innerHTML = '<div class="st-empty">Không tìm thấy trẻ phù hợp.</div>';
       return;
     }
+    const unlocked = cbgvIsUnlocked();
+    const MASK_ICON = '<span class="pii-mask" title="Chỉ CBGV mới có quyền xem">•••••</span>';
     wrap.innerHTML = `<table class="st-table">
       <thead><tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Nơi sinh</th><th>SĐT phụ huynh</th></tr></thead>
       <tbody>${list.map((s, i) => {
         const isFemale = /nữ|nu/i.test(s.gender);
         const init = initials(s.name);
         const rowId = 'st' + i;
+        const phoneCell = unlocked ? escapeHtml(s.phone || '–') : MASK_ICON;
+        const addressCell = unlocked
+          ? escapeHtml([s.hamlet, s.ward, s.province].filter(Boolean).join(', ') || '–')
+          : MASK_ICON;
+        const fatherCell = unlocked
+          ? (escapeHtml(s.father || '–') + (s.fatherYear ? ' ('+escapeHtml(s.fatherYear)+')' : ''))
+          : MASK_ICON;
+        const motherCell = unlocked
+          ? (escapeHtml(s.mother || '–') + (s.motherYear ? ' ('+escapeHtml(s.motherYear)+')' : ''))
+          : MASK_ICON;
         return `<tr class="st-row" id="${rowId}" onclick="toggleStudent('${rowId}', ${i})">
           <td class="st-idx" data-lbl="STT">${i+1}</td>
           <td class="st-name-cell" data-lbl="Trẻ">
@@ -621,15 +727,15 @@
           <td data-lbl="Ngày sinh">${escapeHtml(s.dob)}</td>
           <td data-lbl="Giới tính"><span class="st-gender ${isFemale?'f':'m'}">${escapeHtml(s.gender)}</span></td>
           <td data-lbl="Nơi sinh">${escapeHtml(s.birthplace || '–')}</td>
-          <td data-lbl="SĐT">${escapeHtml(s.phone || '–')}</td>
+          <td data-lbl="SĐT">${phoneCell}</td>
         </tr>
         <tr class="st-detail-row" id="${rowId}_d" style="display:none">
           <td colspan="6"><div class="st-detail-inner">
             <div class="st-field"><strong>Mã học sinh</strong><span>${escapeHtml(s.studentCode || '–')}</span></div>
             <div class="st-field"><strong>Dân tộc / Tôn giáo</strong><span>${escapeHtml(s.ethnic || '–')} / ${escapeHtml(s.religion || '–')}</span></div>
-            <div class="st-field"><strong>Địa chỉ thường trú</strong><span>${escapeHtml([s.hamlet, s.ward, s.province].filter(Boolean).join(', ') || '–')}</span></div>
-            <div class="st-field"><strong>Họ tên cha</strong><span>${escapeHtml(s.father || '–')} ${s.fatherYear ? '('+escapeHtml(s.fatherYear)+')' : ''}</span></div>
-            <div class="st-field"><strong>Họ tên mẹ</strong><span>${escapeHtml(s.mother || '–')} ${s.motherYear ? '('+escapeHtml(s.motherYear)+')' : ''}</span></div>
+            <div class="st-field"><strong>Địa chỉ thường trú</strong><span>${addressCell}</span></div>
+            <div class="st-field"><strong>Họ tên cha</strong><span>${fatherCell}</span></div>
+            <div class="st-field"><strong>Họ tên mẹ</strong><span>${motherCell}</span></div>
           </div></td>
         </tr>`;
       }).join('')}</tbody></table>`;
@@ -644,10 +750,11 @@
     if(!currentClass) return;
     const q = e.target.value.trim().toLowerCase();
     if(!q){ renderStudents(currentClass.students); return; }
+    const unlocked = cbgvIsUnlocked();
     renderStudents(currentClass.students.filter(s =>
       s.name.toLowerCase().includes(q) ||
-      (s.father || '').toLowerCase().includes(q) ||
-      (s.mother || '').toLowerCase().includes(q)
+      (unlocked && (s.father || '').toLowerCase().includes(q)) ||
+      (unlocked && (s.mother || '').toLowerCase().includes(q))
     ));
   }, 250));
 
@@ -1510,7 +1617,7 @@
   }, 250));
 
   // ============ FETCH DATA FROM GAS API ============
-  const CACHE_KEY = 'mnDienXuan_data';
+  const CACHE_KEY = 'mnDienThinh_data';
   const CACHE_VERSION = 'v2026.04'; // ⚠ TĂNG khi đổi schema (VD: thêm cột vào MinhChung) → mọi trình duyệt tự xoá cache cũ
   const CACHE_TTL = 10 * 60 * 1000; // 10 phút — dữ liệu cache hết hạn sau 10 phút
 
@@ -1756,7 +1863,6 @@
         delete cur.pwd;
         // Giữ pwdSetAt + pwdHash nếu có; xóa toàn bộ object nếu chỉ còn pwdSetAt
         try{ localStorage.setItem(ADM_KEY, JSON.stringify(cur)); } catch(e){}
-        console.info('[adm] Đã xóa plaintext password cũ khỏi localStorage (HOTFIX v2026.06).');
       }
     } catch(e){}
   })();

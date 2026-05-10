@@ -290,12 +290,38 @@
         <h3 id="spTitle">Lớp ...</h3>
         <div class="sp-meta" id="spMeta"></div>
       </div>
-      <button class="close-btn" onclick="closeStudents()">✕</button>
+      <div class="sp-actions">
+        <button type="button" class="cbgv-toggle" id="cbgvToggleBtn" onclick="cbgvOpenUnlock()" title="Chỉ CBGV mới có quyền xem SĐT phụ huynh, tên cha mẹ, địa chỉ chi tiết.">🔒 Mở thông tin (CBGV)</button>
+        <button class="close-btn" onclick="closeStudents()">✕</button>
+      </div>
     </div>
-    <div class="sp-search"><input type="text" id="stSearch" placeholder="Tìm theo họ tên, tên cha/mẹ..."></div>
+    <div class="sp-search"><input type="text" id="stSearch" placeholder="Tìm theo họ tên..."></div>
+    <div class="sp-pii-note" id="spPiiNote">
+      <span aria-hidden="true">🛡️</span>
+      <span>SĐT phụ huynh, tên cha mẹ, địa chỉ chi tiết được bảo vệ theo <b>Nghị định 13/2023/NĐ-CP</b>. Chỉ CBGV của trường mới xem được.</span>
+    </div>
     <div id="stTableWrap"></div>
   </div>
 </section>
+
+<!-- ===== Modal đăng nhập CBGV — bảo vệ PII trẻ em theo Nghị định 13/2023 ===== -->
+<div class="cbgv-overlay" id="cbgvOverlay" role="dialog" aria-modal="true" aria-label="Mở thông tin trẻ - dành cho CBGV">
+  <div class="cbgv-panel">
+    <button type="button" class="cbgv-close" onclick="cbgvCloseModal()" title="Đóng (ESC)" aria-label="Đóng">✕</button>
+    <div class="cbgv-icon" aria-hidden="true">🔐</div>
+    <h3>Mở thông tin trẻ đầy đủ</h3>
+    <p class="cbgv-desc">
+      Số điện thoại phụ huynh, họ tên cha mẹ và địa chỉ chi tiết của trẻ là <b>thông tin cá nhân</b> được bảo vệ theo
+      <b>Nghị định 13/2023/NĐ-CP</b>. Chỉ cán bộ – giáo viên (CBGV) của trường được phép xem.
+    </p>
+    <div class="cbgv-form">
+      <input type="password" id="cbgvPwdInput" placeholder="Mật khẩu CBGV..." autocomplete="off" onkeydown="if(event.key==='Enter')cbgvDoUnlock()">
+      <button type="button" onclick="cbgvDoUnlock()" class="cbgv-submit">Mở khóa</button>
+    </div>
+    <div id="cbgvMsg" class="cbgv-msg" role="status" aria-live="polite"></div>
+    <p class="cbgv-foot">Phiên mở khóa chỉ duy trì trong tab này. Đóng tab sẽ tự động khóa lại.</p>
+  </div>
+</div>
 
 
 <!-- ===== HƯỚNG DẪN SỬ DỤNG — popup modal (mở qua nav "Hướng dẫn") ===== -->
@@ -3360,7 +3386,7 @@ function App() {
   useEffect(() => {
     const onStorage = (e) => {
       // Storage event chỉ fire ở tab KHÁC (không cùng tab) — nên chỉ catch khi user vừa update HSS bên kia
-      if (e.key === 'mnDienXuan_data' || e.key === 'hso-cache-v1') {
+      if (e.key === 'mnDienThinh_data' || e.key === 'mnDienXuan_data' || e.key === 'hso-cache-v1') {
         setHssDataChangeNotice(true);
       }
     };
@@ -3483,7 +3509,6 @@ function App() {
         }
       } catch (e) {
         // 404 = chưa có báo cáo trên Drive cho trường này → OK, tiếp tục dùng local
-        console.log('[auto-load] Chưa có báo cáo Drive:', e.message);
       }
     })();
   }, [data.schoolInfo?.name, data.schoolInfo?.academicYearFrom, data.schoolInfo?.academicYearTo, settings.appsScriptUrl]);
@@ -4384,7 +4409,7 @@ function HssMinhChungModal({ tree, onClose, onInsertCode, onRefresh }) {
           {(!tree || tree.length === 0) ? (
             <div className="hss-mc-empty">
               Chưa nhận được dữ liệu minh chứng từ Hồ sơ số.<br/>
-              <small>Vui lòng mở cửa sổ KĐCL từ Hồ sơ số (MNDienXuan) để dữ liệu đồng bộ tự động.</small>
+              <small>Vui lòng mở cửa sổ KĐCL từ trang Hồ sơ số để dữ liệu đồng bộ tự động.</small>
             </div>
           ) : filtered.length === 0 ? (
             <div className="hss-mc-empty">Không tìm thấy minh chứng khớp "{q}".</div>
@@ -8881,11 +8906,11 @@ class ErrBoundary extends React.Component {
         window.close();
         // Nếu window.close() không work (có thể do đã có history), fallback sau 150ms
         setTimeout(function(){
-          const url = window.__TDG_BACK_URL__ || '../MNDienXuan/MNDienXuan.html';
+          const url = window.__TDG_BACK_URL__ || '../MNDienThinh/MNDienThinh.html';
           location.href = url;
         }, 150);
       }catch(e){
-        const url = window.__TDG_BACK_URL__ || '../MNDienXuan/MNDienXuan.html';
+        const url = window.__TDG_BACK_URL__ || '../MNDienThinh/MNDienThinh.html';
         location.href = url;
       }
     };
