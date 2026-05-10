@@ -616,13 +616,13 @@
     const note = document.getElementById('spPiiNote');
     if(!btn) return;
     if(cbgvIsUnlocked()){
-      btn.innerHTML = '🔓 Đã mở · Khóa lại';
+      btn.innerHTML = '🔓 <span class="cbgv-text-full">Đã mở · Khóa lại</span><span class="cbgv-text-short">Khóa lại</span>';
       btn.classList.add('unlocked');
       btn.title = 'Đang hiển thị đầy đủ thông tin. Bấm để khóa lại.';
       btn.onclick = window.cbgvLock;
       if(note) note.classList.add('hidden');
     } else {
-      btn.innerHTML = '🔒 Mở thông tin (CBGV)';
+      btn.innerHTML = '🔒 <span class="cbgv-text-full">Mở thông tin (CBGV)</span><span class="cbgv-text-short">CBGV</span>';
       btn.classList.remove('unlocked');
       btn.title = 'Chỉ CBGV mới có quyền xem SĐT phụ huynh, tên cha mẹ, địa chỉ chi tiết.';
       btn.onclick = window.cbgvOpenUnlock;
