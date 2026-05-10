@@ -1,5 +1,8 @@
 # Hồ sơ số Trường Mầm non
 
+> **Triển khai cho:** Trường Mầm non Diễn Thịnh — Nghệ An
+> 🌐 https://schoolrecords.github.io/mamnondienthinh
+
 Website quản lý hồ sơ số cho trường mầm non.
 Dữ liệu đồng bộ tự động từ Google Sheet qua Google Apps Script.
 
